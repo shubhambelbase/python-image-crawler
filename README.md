@@ -2,6 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.7%2B-blue?style=for-the-badge&logo=python&logoColor=white)
 ![Vibe](https://img.shields.io/badge/Vibe-100%25-ff0066?style=for-the-badge)
+[![Download ZIP](https://img.shields.io/badge/Download-Source_Code-ff0066?style=for-the-badge&logo=github)](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME/archive/refs/heads/main.zip)
 
 A powerful, sleek, and dark-themed web image crawler built with Python and CustomTkinter. 
 Extracts image links, downloads high-quality images, and generates a professional PDF report.
@@ -10,24 +11,24 @@ Extracts image links, downloads high-quality images, and generates a professiona
 
 ## ✨ Features
 
-*   **🎨 Ultra Modern UI**: Built with `CustomTkinter` for a premium dark-mode experience.
-*   **🕷️ Deep Crawling**: Recursively finds every image on the site.
-*   **📂 Multi-Source & Bulk**: 
-    *   Load specific URLs from a text file.
-    *   Organize downloaded images into separate folders per domain.
-*   **💾 Auto-Downloader**: Automatically downloads valid images to a local folder.
-*   **🧠 Smart High-Res Logic**: Automatically finds the HD version of thumbnails (Pinterest, Wallpaper sites).
-*   **⚡ Threaded & Fast**: Non-blocking IO for smooth performance.
+* **🎨 Ultra Modern UI**: Built with `CustomTkinter` for a premium dark-mode experience.
+* **🕷️ Deep Crawling**: Recursively finds every image on the site.
+* **📂 Multi-Source & Bulk**: 
+    * Load specific URLs from a text file.
+    * Organize downloaded images into separate folders per domain.
+* **💾 Auto-Downloader**: Automatically downloads valid images to a local folder.
+* **🧠 Smart High-Res Logic**: Automatically finds the HD version of thumbnails (Pinterest, Wallpaper sites).
+* **⚡ Threaded & Fast**: Non-blocking IO for smooth performance.
 
 ## 🚀 Installation
 
 ### 🪟 Windows
 
-1.  **Clone or Download** this repository.
+1.  **Download and Extract** the ZIP (using the button above).
 2.  **Install Dependencies**: 
-    *   Double-click `Install_Dependencies.bat`.
+    * Double-click `Install_Dependencies.bat`.
 3.  **Start the App**: 
-    *   Double-click `Start_App.bat`.
+    * Double-click `Start_App.bat`.
 
 ### 🐧 Linux / 🍎 macOS
 
@@ -53,14 +54,14 @@ Extracts image links, downloads high-quality images, and generates a professiona
 3.  Click **Start Crawling**. 
 
 ### Options
-*   **Download Images**: Save files locally.
-*   **Smart Size Filter**: Ignore junk <5KB.
-*   **Folder per Domain**: Keeps your downloads organized if crawling multiple sites.
+* **Download Images**: Save files locally.
+* **Smart Size Filter**: Ignore junk <5KB.
+* **Folder per Domain**: Keeps your downloads organized if crawling multiple sites.
 
 ## 📦 Requirements
 
-*   Python 3.7+
-*   Internet Connection
+* Python 3.7+
+* Internet Connection
 
 ---
 *Vibe Coded by Shubham*
