@@ -4,7 +4,7 @@
 ![Vibe](https://img.shields.io/badge/Vibe-100%25-ff0066?style=for-the-badge)
 
 A powerful, sleek, and dark-themed web image crawler built with Python and CustomTkinter. 
-Extracts image links, downloads high-quality images, and generates a professional PDF report with visual thumbnails.
+Extracts image links, downloads high-quality images, and generates a professional PDF report.
 
 **100% vibe coded**
 
@@ -12,11 +12,11 @@ Extracts image links, downloads high-quality images, and generates a professiona
 
 *   **🎨 Ultra Modern UI**: Built with `CustomTkinter` for a premium dark-mode experience.
 *   **🕷️ Deep Crawling**: Recursively finds every image on the site.
+*   **📂 Multi-Source & Bulk**: 
+    *   Load specific URLs from a text file.
+    *   Organize downloaded images into separate folders per domain.
 *   **💾 Auto-Downloader**: Automatically downloads valid images to a local folder.
-*   **� Visual PDF Reports**: Generates a PDF that includes **actual thumbnails** of the images found.
-*   **🧠 Smart Filtering**: 
-    *   **Size Filter**: Ignored tiny images/icons (< 5KB).
-    *   **Extension Filter**: Only keeps real image formats.
+*   **🧠 Smart High-Res Logic**: Automatically finds the HD version of thumbnails (Pinterest, Wallpaper sites).
 *   **⚡ Threaded & Fast**: Non-blocking IO for smooth performance.
 
 ## 🚀 Installation
@@ -26,7 +26,6 @@ Extracts image links, downloads high-quality images, and generates a professiona
 1.  **Clone or Download** this repository.
 2.  **Install Dependencies**: 
     *   Double-click `Install_Dependencies.bat`.
-    *   This script automatically checks for Python and installs required libraries (`customtkinter`, `reportlab`, `Pillow`, etc).
 3.  **Start the App**: 
     *   Double-click `Start_App.bat`.
 
@@ -45,14 +44,18 @@ Extracts image links, downloads high-quality images, and generates a professiona
 
 ## 📖 Usage
 
-1.  **Target URL**: Enter the website address (e.g., `https://example.com`).
-2.  **Switches**:
-    *   **Download Images**: Toggle on to save files locally to `downloaded_images/`.
-    *   **Smart Size Filter**: Toggle on to ignore tiny junk images.
-3.  **Start Crawling**: Click the button.
-4.  **Results**: 
-    *   Images saved in `downloaded_images/`
-    *   Professional PDF report generated as `images.pdf` (or your chosen name).
+### Single URL
+1.  Enter the URL (e.g., `https://example.com`) and click **Start**.
+
+### Bulk Mode
+1.  Create a text file (`targets.txt`) with one URL per line.
+2.  Click **Load Text File** in the app.
+3.  Click **Start Crawling**. 
+
+### Options
+*   **Download Images**: Save files locally.
+*   **Smart Size Filter**: Ignore junk <5KB.
+*   **Folder per Domain**: Keeps your downloads organized if crawling multiple sites.
 
 ## 📦 Requirements
 

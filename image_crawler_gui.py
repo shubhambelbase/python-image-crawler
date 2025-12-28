@@ -49,23 +49,25 @@ class ImageCrawlApp:
         input_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         input_frame.pack(fill=tk.X, padx=20)
         
-        # URL Input
+        # URL Input Row
+        self.url_mode_var = ctk.StringVar(value="Single")
+        
+        # Grid for URL inputs
+        input_frame.columnconfigure(1, weight=1)
+        
         ctk.CTkLabel(input_frame, text="Target URL:", font=("Roboto", 14)).grid(row=0, column=0, sticky="w", pady=10)
         self.url_var = tk.StringVar()
-        self.url_entry = ctk.CTkEntry(input_frame, textvariable=self.url_var, width=400, placeholder_text="https://example.com")
+        self.url_entry = ctk.CTkEntry(input_frame, textvariable=self.url_var, placeholder_text="https://example.com")
         self.url_entry.grid(row=0, column=1, padx=15, sticky="ew")
         
+        self.load_btn = ctk.CTkButton(input_frame, text="Load Text File", command=self.load_url_file, width=120)
+        self.load_btn.grid(row=0, column=2, padx=5)
+
         # Max Pages Input
         ctk.CTkLabel(input_frame, text="Max Pages:", font=("Roboto", 14)).grid(row=1, column=0, sticky="w", pady=10)
         self.max_pages_var = tk.IntVar(value=50)
         self.max_pages_entry = ctk.CTkEntry(input_frame, textvariable=self.max_pages_var, width=100)
         self.max_pages_entry.grid(row=1, column=1, padx=15, sticky="w")
-
-        # Output PDF
-        ctk.CTkLabel(input_frame, text="Output PDF:", font=("Roboto", 14)).grid(row=2, column=0, sticky="w", pady=10)
-        self.output_var = tk.StringVar(value="images.pdf")
-        self.output_entry = ctk.CTkEntry(input_frame, textvariable=self.output_var, width=300)
-        self.output_entry.grid(row=2, column=1, padx=15, sticky="w")
         
         # Switches
         options_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
@@ -77,9 +79,13 @@ class ImageCrawlApp:
         
         self.filter_var = ctk.BooleanVar(value=True)
         self.filter_switch = ctk.CTkSwitch(options_frame, text="Smart Size Filter (>5KB)", variable=self.filter_var, font=("Roboto", 12))
-        self.filter_switch.pack(side=tk.LEFT)
+        self.filter_switch.pack(side=tk.LEFT, padx=(0, 20))
+
+        self.organize_var = ctk.BooleanVar(value=False)
+        self.org_switch = ctk.CTkSwitch(options_frame, text="Folder per Domain", variable=self.organize_var, font=("Roboto", 12))
+        self.org_switch.pack(side=tk.LEFT)
         
-        input_frame.columnconfigure(1, weight=1)
+        # input_frame.columnconfigure(1, weight=1) already done above
 
         # Controls
         btn_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
@@ -115,14 +121,28 @@ class ImageCrawlApp:
             self.log_text.see(tk.END)
         self.root.after(100, self.process_logs)
 
+    def load_url_file(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+        if file_path:
+            with open(file_path, 'r') as f:
+                urls = [line.strip() for line in f.readlines() if line.strip()]
+            
+            if urls:
+                self.url_var.set(file_path)
+                self.log(f"Loaded {len(urls)} URLs from file")
+                self.url_mode_var.set("File")
+            else:
+                self.log("File is empty")
+
     def toggle_inputs(self, enable):
         state = "normal" if enable else "disabled"
         self.url_entry.configure(state=state)
+        self.load_btn.configure(state=state)
         self.max_pages_entry.configure(state=state)
-        self.output_entry.configure(state=state)
         self.start_btn.configure(state=state)
         self.download_switch.configure(state=state)
         self.filter_switch.configure(state=state)
+        self.org_switch.configure(state=state)
         self.stop_btn.configure(state="normal" if not enable else "disabled")
 
     def start_crawling(self):
@@ -137,27 +157,36 @@ class ImageCrawlApp:
             messagebox.showerror("Error", "Max pages must be a number")
             return
 
-        pdf_file = self.output_var.get().strip()
-        if not pdf_file:
-            messagebox.showerror("Error", "Please enter a PDF filename")
-            return
-        if not pdf_file.lower().endswith('.pdf'):
-            pdf_file += ".pdf"
-
         self.is_running = True
         self.toggle_inputs(False)
         self.progress_bar.set(0)
         self.log_text.delete(1.0, tk.END)
-        self.log(f"Starting crawl for {url}")
+        # Prepare URL List
+        target_urls = []
+        if os.path.isfile(url):
+            try:
+                with open(url, 'r') as f:
+                    target_urls = [line.strip() for line in f.readlines() if line.strip().startswith('http')]
+            except:
+                messagebox.showerror("Error", "Could not read URL file")
+                return
+        else:
+            target_urls = [url]
+
+        if not target_urls:
+            messagebox.showerror("Error", "No valid URLs found")
+            return
+            
+        self.log(f"Starting job with {len(target_urls)} targets")
         
         # Create download folder if needed
         if self.download_var.get():
             if not os.path.exists(self.download_folder):
                 os.makedirs(self.download_folder)
-                self.log(f"Created folder: {self.download_folder}")
         
         # Start Thread
-        self.thread = threading.Thread(target=self.crawl_logic, args=(url, max_pages, pdf_file))
+        organize_by_domain = self.organize_var.get()
+        self.thread = threading.Thread(target=self.crawl_logic_multi, args=(target_urls, max_pages, organize_by_domain))
         self.thread.daemon = True
         self.thread.start()
 
@@ -166,12 +195,60 @@ class ImageCrawlApp:
             self.is_running = False
             self.log("Stopping crawler... (finishing current task)")
             self.stop_btn.configure(state="disabled", text="Stopping...")
+            
+    def get_unique_filename(self, filename):
+        # If file exists, add (1), (2), etc.
+        if not os.path.exists(filename):
+            return filename
+            
+        base, ext = os.path.splitext(filename)
+        counter = 1
+        while True:
+            new_filename = f"{base} ({counter}){ext}"
+            if not os.path.exists(new_filename):
+                return new_filename
+            counter += 1
 
-    def crawl_logic(self, start_url, max_pages, pdf_filename):
+    def crawl_logic_multi(self, urls, max_pages, organize_by_domain):
+        try:
+            for i, start_url in enumerate(urls):
+                if not self.is_running: break
+                
+                self.log(f"--- Processing Target {i+1}/{len(urls)}: {start_url} ---")
+                rows = self.crawl_single_site(start_url, max_pages, organize_by_domain)
+                
+                # Generate PDF PER SITE
+                domain = urlparse(start_url).netloc
+                safe_name = domain.replace('www.', '').replace(':', '_')
+                safe_name = "".join([c for c in safe_name if c.isalpha() or c.isdigit() or c in ('-', '_', '.')])
+                if not safe_name: safe_name = "website_crawl"
+                
+                pdf_filename = f"{safe_name}.pdf"
+                pdf_filename = self.get_unique_filename(pdf_filename)
+                
+                self.log(f"Generating PDF for {domain}...")
+                self.create_pdf_report(pdf_filename, rows, start_url)
+                self.log(f"Saved: {pdf_filename}")
+            
+        except Exception as e:
+            self.log(f"Job Error: {e}")
+        finally:
+            self.stop_thread_safe()
+            self.log(f"All Jobs Finished.")
+
+    def crawl_single_site(self, start_url, max_pages, organize_by_domain):
         visited = set()
         queue_urls = [start_url]
-        image_rows = [] # [Image URL, Alt Text, Source Page, Local Path (if any)]
+        image_rows = [] # [Image URL, Alt Text, Source Page]
         domain = urlparse(start_url).netloc
+        # Create subfolder for domain if requested
+        safe_domain = "".join([c for c in domain if c.isalpha() or c.isdigit() or c in ('-', '_')])
+        domain_folder = os.path.join(self.download_folder, safe_domain) if organize_by_domain else self.download_folder
+        
+        if organize_by_domain and self.download_var.get():
+            if not os.path.exists(domain_folder):
+                os.makedirs(domain_folder)
+
         pages_processed = 0
         
         headers = {
@@ -180,154 +257,144 @@ class ImageCrawlApp:
         
         valid_exts = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.tiff', '.ico')
 
-        try:
-            while queue_urls and self.is_running and pages_processed < max_pages:
-                current_url = queue_urls.pop(0)
+        while queue_urls and self.is_running and pages_processed < max_pages:
+            current_url = queue_urls.pop(0)
+            
+            if current_url in visited:
+                continue
+            
+            visited.add(current_url)
+            self.root.after(0, lambda u=current_url: self.progress_label.configure(text=f"Crawling: {u}"))
+            
+            try:
+                response = requests.get(current_url, headers=headers, timeout=10)
+                response.raise_for_status()
+                soup = BeautifulSoup(response.text, 'html.parser')
                 
-                if current_url in visited:
-                    continue
+                images = soup.find_all('img')
+                new_images = 0
                 
-                visited.add(current_url)
-                self.root.after(0, lambda u=current_url: self.progress_label.configure(text=f"Crawling: {u}"))
-                
-                try:
-                    response = requests.get(current_url, headers=headers, timeout=10)
-                    response.raise_for_status()
-                    soup = BeautifulSoup(response.text, 'html.parser')
+                for img in images:
+                    # Priority for high-res attributes
+                    src = (img.get('data-full-url') or 
+                           img.get('data-large-src') or 
+                           img.get('data-high-res') or 
+                           img.get('data-src') or 
+                           img.get('data-original') or 
+                           img.get('data-lazy-src') or 
+                           img.get('src'))
                     
-                    images = soup.find_all('img')
-                    new_images = 0
-                    
-                    for img in images:
-                        # Priority for high-res attributes
-                        src = (img.get('data-full-url') or 
-                               img.get('data-large-src') or 
-                               img.get('data-high-res') or 
-                               img.get('data-src') or 
-                               img.get('data-original') or 
-                               img.get('data-lazy-src') or 
-                               img.get('src'))
+                    # Handle srcset - try to find the largest image
+                    if img.get('srcset'):
+                        try:
+                            parts = img.get('srcset').split(',')
+                            best_part = parts[-1].strip().split(' ')[0]
+                            if best_part:
+                                src = best_part
+                        except:
+                            pass
                         
-                        # Handle srcset - try to find the largest image
-                        if img.get('srcset'):
+                    alt = img.get('alt', '')
+                    
+                    if src and not src.startswith('data:'):
+                        full_img_url = urljoin(current_url, src)
+                        
+                        # --- High-Resolution Magic ---
+                        # Attempt to guess high-res URL patterns for common sites (Pinterest, diverse wallpapers)
+                        # 1. Pinterest: 236x -> originals
+                        if 'pinimg.com' in full_img_url:
+                            full_img_url = full_img_url.replace('/236x/', '/originals/')
+                            full_img_url = full_img_url.replace('/474x/', '/originals/')
+                            full_img_url = full_img_url.replace('/736x/', '/originals/')
+                        
+                        # 2. WordPress / Generic Thumbs: -150x150, -300x200
+                        import re
+                        high_res_url = re.sub(r'-\d+x\d+(?=\.[a-zA-Z]+$)', '', full_img_url)
+                        high_res_url = re.sub(r'-\d+x(?=\.[a-zA-Z]+$)', '', high_res_url)
+                        
+                        # 3. Common "thumb", "small", "preview" replacement
+                        high_res_url = high_res_url.replace('thumb', 'large').replace('small', 'full').replace('preview', 'source')
+                        
+                        # Check if the "guessed" High-Res URL actually exists
+                        final_url = full_img_url
+                        if high_res_url != full_img_url:
                             try:
-                                parts = img.get('srcset').split(',')
-                                best_part = parts[-1].strip().split(' ')[0]
-                                if best_part:
-                                    src = best_part
+                                head_resp = requests.head(high_res_url, headers=headers, timeout=1.5)
+                                if head_resp.status_code == 200:
+                                    final_url = high_res_url
                             except:
                                 pass
-                            
-                        alt = img.get('alt', '')
                         
-                        if src and not src.startswith('data:'):
-                            full_img_url = urljoin(current_url, src)
+                        full_img_url = final_url
+                        # -----------------------------
+
+                        path = urlparse(full_img_url).path.lower()
+                        
+                        if path.endswith(valid_exts): 
+                            # Process Image
+                            valid_image = True
                             
-                            # --- High-Resolution Magic ---
-                            # Attempt to guess high-res URL patterns for common sites (Pinterest, diverse wallpapers)
-                            # 1. Pinterest: 236x -> originals
-                            if 'pinimg.com' in full_img_url:
-                                full_img_url = full_img_url.replace('/236x/', '/originals/')
-                                full_img_url = full_img_url.replace('/474x/', '/originals/')
-                                full_img_url = full_img_url.replace('/736x/', '/originals/')
-                            
-                            # 2. WordPress / Generic Thumbs: -150x150, -300x200
-                            # Regex replacement could be safer, but simple string replacement works for common suffix patterns
-                            # Removing dimension suffix (e.g. image-300x300.jpg -> image.jpg)
-                            import re
-                            # Pattern matches "-123x123" or "-123x" before extension
-                            high_res_url = re.sub(r'-\d+x\d+(?=\.[a-zA-Z]+$)', '', full_img_url)
-                            high_res_url = re.sub(r'-\d+x(?=\.[a-zA-Z]+$)', '', high_res_url)
-                            
-                            # 3. Common "thumb", "small", "preview" replacement
-                            high_res_url = high_res_url.replace('thumb', 'large').replace('small', 'full').replace('preview', 'source')
-                            
-                            # Check if the "guessed" High-Res URL is actually valid/reachable
-                            # If we made a change, let's try to verify HEAD, otherwise fallback to original found url
-                            final_url = full_img_url
-                            if high_res_url != full_img_url:
+                            # Download & Filter Check
+                            if self.download_var.get() or self.filter_var.get():
                                 try:
-                                    # Quick HEAD request to check if high-res exists (fast timeout)
-                                    head_resp = requests.head(high_res_url, headers=headers, timeout=1.5)
-                                    if head_resp.status_code == 200:
-                                        final_url = high_res_url
-                                        # self.log(f"Upgraded to High-Res: {os.path.basename(final_url)}")
-                                except:
-                                    pass # Fallback to original if 404 or verify fails
-                            
-                            full_img_url = final_url
-                            # -----------------------------
-
-                            path = urlparse(full_img_url).path.lower()
-                            
-                            if path.endswith(valid_exts): 
-                                # Process Image
-                                local_path = None
-                                valid_image = True
-                                
-                                # Download & Filter Check
-                                if self.download_var.get() or self.filter_var.get():
-                                    try:
-                                        img_resp = requests.get(full_img_url, headers=headers, timeout=5)
-                                        content_size = len(img_resp.content)
+                                    img_resp = requests.get(full_img_url, headers=headers, timeout=5)
+                                    content_size = len(img_resp.content)
+                                    
+                                    # Smart Filter: Check if size > 5KB (ignore tiny icons)
+                                    if self.filter_var.get() and content_size < 5120:
+                                        valid_image = False
+                                    
+                                    if valid_image and self.download_var.get():
+                                        filename = os.path.basename(urlparse(full_img_url).path)
+                                        # Sanitize filename
+                                        filename = "".join([c for c in filename if c.isalpha() or c.isdigit() or c in (' ', '.', '_')]).rstrip()
+                                        if not filename: filename = "image.jpg"
                                         
-                                        # Smart Filter: Check if size > 5KB (ignore tiny icons)
-                                        if self.filter_var.get() and content_size < 5120:
-                                            valid_image = False
+                                        timestamp = int(time.time() * 1000)
+                                        local_filename = f"{timestamp}_{filename}"
                                         
-                                        if valid_image and self.download_var.get():
-                                            filename = os.path.basename(urlparse(full_img_url).path)
-                                            # Sanitize filename
-                                            filename = "".join([c for c in filename if c.isalpha() or c.isdigit() or c in (' ', '.', '_')]).rstrip()
-                                            if not filename: filename = "image.jpg"
+                                        # Use domain folder if organized
+                                        save_path = os.path.join(domain_folder, local_filename)
+                                        
+                                        with open(save_path, 'wb') as f:
+                                            f.write(img_resp.content)
                                             
-                                            timestamp = int(time.time() * 1000)
-                                            local_filename = f"{timestamp}_{filename}"
-                                            local_path = os.path.join(self.download_folder, local_filename)
-                                            
-                                            with open(local_path, 'wb') as f:
-                                                f.write(img_resp.content)
-                                                
-                                    except Exception as e:
-                                        # If download fails, check filter
-                                        if self.filter_var.get(): 
-                                            valid_image = False
-                                
-                                if valid_image:
-                                    clean_alt = alt[:100] + "..." if len(alt) > 100 else alt
-                                    image_rows.append([full_img_url, clean_alt, current_url])
-                                    new_images += 1
+                                except Exception as e:
+                                    if self.filter_var.get(): 
+                                        valid_image = False
+                            
+                            if valid_image:
+                                clean_alt = alt[:100] + "..." if len(alt) > 100 else alt
+                                image_rows.append([full_img_url, clean_alt, current_url])
+                                new_images += 1
+                
+                self.log(f"Scanned {current_url} - Found {new_images} images")
+                
+                links = soup.find_all('a', href=True)
+                for link in links:
+                    href = link['href']
+                    full_url = urljoin(current_url, href)
+                    parsed_url = urlparse(full_url)
                     
-                    self.log(f"Scanned {current_url} - Found {new_images} images")
-                    
-                    links = soup.find_all('a', href=True)
-                    for link in links:
-                        href = link['href']
-                        full_url = urljoin(current_url, href)
-                        parsed_url = urlparse(full_url)
-                        
-                        if parsed_url.netloc == domain and parsed_url.scheme in ['http', 'https']:
-                            clean_url = full_url.split('#')[0]
-                            if clean_url not in visited and clean_url not in queue_urls:
-                                queue_urls.append(clean_url)
-                                
-                    pages_processed += 1
-                    progress = (pages_processed / max_pages)
-                    self.root.after(0, lambda p=progress: self.progress_bar.set(p))
-                    
-                except Exception as e:
-                    self.log(f"Error: {str(e)[:50]}...")
-                    
-                time.sleep(0.5)
+                    if parsed_url.netloc == domain and parsed_url.scheme in ['http', 'https']:
+                        clean_url = full_url.split('#')[0]
+                        if clean_url not in visited and clean_url not in queue_urls:
+                            queue_urls.append(clean_url)
+                            
+                pages_processed += 1
+                progress = (pages_processed / max_pages)
+                self.root.after(0, lambda p=progress: self.progress_bar.set(p))
+                
+            except Exception as e:
+                self.log(f"Error: {str(e)[:50]}...")
+                
+            time.sleep(0.5)
 
-            self.log("Generating Enhanced PDF Report...")
-            self.create_pdf_report(pdf_filename, image_rows, start_url)
-            
-        except Exception as e:
-            self.log(f"Critical Error: {e}")
-        finally:
-            self.stop_thread_safe()
-            self.log(f"Finished. Saved to {pdf_filename}")
+        return image_rows
+
+    # Replaces old crawl_logic
+    def crawl_logic_placeholder(self):
+        pass
 
     def create_pdf_report(self, filename, data, start_url):
         doc = SimpleDocTemplate(filename, pagesize=landscape(letter))
