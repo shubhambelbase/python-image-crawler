@@ -25,44 +25,38 @@ Extracts image links, downloads high-quality images, and generates a professiona
 
 [![Download ZIP](https://img.shields.io/badge/Download_Project_ZIP-ff0066?style=for-the-badge&logo=github)](https://github.com/shubhambelbase/python-image-crawler/archive/refs/heads/main.zip)
 
-1.  **Download and Extract** the ZIP (click the button above).
-2.  **Install Dependencies**: 
-    * Double-click `Install_Dependencies.bat`.
-3.  **Start the App**: 
-    * Double-click `Start_App.bat`.
+1. **Download and Extract** the ZIP (click the button above).
+2. **Install Dependencies**: 
+   * Double-click `Install_Dependencies.bat`.
+3. **Start the App**: 
+   * Double-click `Start_App.bat`.
+
+---
 
 ### 🐧 Linux / 🍎 macOS
 
-1.  **Clone or Download** this repository.
-2.  Open your terminal and navigate to the folder.
-3.  **Install Dependencies**:
-    ```bash
-    pip3 install -r requirements.txt
-    ```
-4.  **Start the App**:
-    ```bash
-    python3 image_crawler_gui.py
-    ```
+For Unix-based systems, it is recommended to use a virtual environment to ensure the GUI runs smoothly.
 
-## 📖 Usage
+#### **1. Install System Prerequisites**
+Before running the app, ensure you have the Python Tkinter library installed on your system:
 
-### Single URL
-1.  Enter the URL (e.g., `https://example.com`) and click **Start**.
+* **macOS (Homebrew):** `brew install python-tk`
+* **Linux (Debian/Ubuntu):** `sudo apt install python3-tk python3-pip`
 
-### Bulk Mode
-1.  Create a text file (`targets.txt`) with one URL per line.
-2.  Click **Load Text File** in the app.
-3.  Click **Start Crawling**. 
+#### **2. Setup & Installation**
+Open your terminal and run the following commands:
 
-### Options
-* **Download Images**: Save files locally.
-* **Smart Size Filter**: Ignore junk <5KB.
-* **Folder per Domain**: Keeps your downloads organized if crawling multiple sites.
+```bash
+# Clone the repository
+git clone [https://github.com/shubhambelbase/python-image-crawler.git](https://github.com/shubhambelbase/python-image-crawler.git)
+cd python-image-crawler
 
-## 📦 Requirements
+# Create a virtual environment
+python3 -m venv venv
 
-* Python 3.7+
-* Internet Connection
+# Activate the environment
+# For macOS/Linux:
+source venv/bin/activate
 
----
-*Vibe Coded by Shubham*
+# Install requirements
+pip install -r requirements.txt
