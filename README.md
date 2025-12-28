@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.7%2B-blue?style=for-the-badge&logo=python&logoColor=white)
 ![Vibe](https://img.shields.io/badge/Vibe-100%25-ff0066?style=for-the-badge)
-[![Download ZIP](https://img.shields.io/badge/Download-Source_Code-ff0066?style=for-the-badge&logo=github)](https://github.com/shubhambelbase/python-image-crawler/blob/main/ImageCrawler.zip)
+[![Download ZIP](https://img.shields.io/badge/Download-Source_Code-ff0066?style=for-the-badge&logo=github)](https://github.com/shubhambelbase/python-image-crawler/archive/refs/heads/main.zip)
 
 A powerful, sleek, and dark-themed web image crawler built with Python and CustomTkinter. 
 Extracts image links, downloads high-quality images, and generates a professional PDF report.
@@ -65,4 +65,3 @@ Extracts image links, downloads high-quality images, and generates a professiona
 
 ---
 *Vibe Coded by Shubham*
-
